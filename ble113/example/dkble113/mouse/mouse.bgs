@@ -1,0 +1,83 @@
+#declare buffer for building attribute value
+dim tmp(3)
+#buffer for accelerometer communication
+dim acc(6)
+
+dim hid_attribute
+
+event system_boot(major,minor,patch,build,ll_version,protocol,hw)
+    #start advertising in connectable mode
+    call gap_set_mode(gap_general_discoverable,gap_undirected_connectable)
+	
+	#start accelerometer
+	acc(0:1)=$2a #CTRL_REG1 address
+	acc(1:1)=3  #enable accelerometer, set fast mode
+	call hardware_i2c_write($38,1,2,acc(0:2))
+	
+   
+	call sm_set_bondable_mode(1)
+    
+    #use default report for mouse
+    hid_attribute = hid_mouse
+end
+
+dim i2cresult
+dim data_len
+dim tval
+event hardware_soft_timer(handle)
+    #read acceleration
+	acc(0:1)=1
+	call hardware_i2c_write($38,0,1,acc(0:1))#set address
+    call hardware_i2c_read($38,1,6)(i2cresult,data_len,acc(0))#read data
+	#buttons
+	call hardware_io_port_read(0,3)(i2cresult,data_len,tval)
+	tmp(0:1)= tval
+	
+	#scale acceleration down	
+	tval=acc(0:1)>>2
+	#sign extend
+	if (tval > $1f)
+		tval=tval|$c0
+	end if
+	tmp(1:1)=tval
+	
+	tval=acc(2:1)>>2
+	#sign extend
+	if (tval > $1f)
+		tval=tval|$c0
+	end if
+	
+	tmp(2:1)=0-tval#invert y-axis
+	
+	call attributes_write(hid_attribute,0,3,tmp(0:3))
+end
+
+event connection_disconnected(handle,result)
+    #start advertising again after disconnection
+    call gap_set_mode(gap_general_discoverable,gap_undirected_connectable)
+     #stop timer
+    call hardware_set_soft_timer(0,0,0)
+end
+
+event connection_status(connection, flags, address, address_type, conn_interval, timeout, latency, bonding)
+    if flags &  connection_completed then
+        #timer at every second repeating
+        call hardware_set_soft_timer(655,0,0)
+    
+        #always initialize protocol mode to default 1 after connection
+        call attributes_write(hid_protocol_mode,0,1,1)
+        hid_attribute = hid_mouse
+    end if
+end
+
+event attributes_value(connection, reason, handle, offset, value_len, value_data)
+        
+    if value_data(0:1) = 1 then
+        #switched to report modes
+        hid_attribute = hid_mouse
+    end if
+    if value_data(0:1)=2 then
+        #switched to boot mode
+        hid_attribute = hid_boot_mouse
+    end if
+end
