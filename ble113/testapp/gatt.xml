@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <configuration>
-    <service uuid="1800">
-      <description>Generic Access Profile</description>
-      <characteristic uuid="2a00">
-        <properties read="true" const="true" />
-        <value>ble60 keyboard</value>
-      </characteristic>
-      <characteristic uuid="2a01">
-        <properties read="true" const="true" />
-        <value type="hex">8000</value>
-      </characteristic>
+  <service uuid="1800">
+    <description>Generic Access Profile</description>
+    <characteristic uuid="2a00">
+      <properties read="true" const="true" />
+      <value>gh60ble keyboard</value>
+    </characteristic>
+    <characteristic uuid="2a01">
+      <properties read="true" const="true" />
+      <!--<value type="hex">8000</value>-->
+      <value type="hex">c103</value>
+    </characteristic>
     </service>
     <service type="primary" uuid="180A" id="manufacturer">
         <characteristic uuid="2A29">
